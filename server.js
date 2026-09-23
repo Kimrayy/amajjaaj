@@ -66,6 +66,9 @@ const orders = new Map();
 const rupiah=v=>new Intl.NumberFormat("id-ID",{style:"currency",currency:"IDR",maximumFractionDigits:0}).format(v);
 const invoice=()=> "TPDEMO" + Date.now().toString(36).toUpperCase() + crypto.randomBytes(3).toString("hex").toUpperCase();
 const configured={topup:Boolean(TOPUP_API_BASE_URL&&TOPUP_API_KEY),payment:Boolean(PAYMENT_API_BASE_URL&&PAYMENT_API_KEY),supabase:Boolean(SUPABASE_URL&&SUPABASE_SERVICE_ROLE_KEY)};
+const demoUsers = new Map([
+  ["demo",{id:"demo-user-001",name:"Demo User",username:"demo",email:"demo@playmart.test",whatsapp:"6281200000000",password:"demo123"}]
+]);
 
 async function providerRequest(baseUrl,apiKey,requestPath,payload){
   const r=await fetch(baseUrl+(requestPath.startsWith("/")?requestPath:"/"+requestPath),{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+apiKey,"x-api-key":apiKey},body:JSON.stringify(payload)});
@@ -89,7 +92,7 @@ async function findOrder(id){
   if(!configured.supabase)return null;
   const r=await fetch(SUPABASE_URL+"/rest/v1/orders?invoice=eq."+encodeURIComponent(id)+"&select=*&limit=1",{headers:{apikey:SUPABASE_SERVICE_ROLE_KEY,authorization:"Bearer "+SUPABASE_SERVICE_ROLE_KEY}});
   if(!r.ok)return null; const a=await r.json(); if(!a[0])return null; const x=a[0];
-  const o={invoice:x.invoice,product:x.product,productSlug:x.product_slug,item:x.item,amount:x.amount,amountLabel:rupiah(x.amount),userId:x.user_id,serverId:x.server_id,paymentMethod:x.payment_method,whatsapp:x.whatsapp,promo:x.promo,paymentStatus:x.payment_status,transactionStatus:x.transaction_status,providerReference:x.provider_reference,paymentUrl:x.payment_url,createdAt:x.created_at,message:"Pesanan ditemukan."};
+  const o={invoice:x.invoice,product:x.product,productSlug:x.product_slug,item:x.item,amount:x.amount,amountLabel:rupiah(x.amount),userId:x.user_id,serverId:x.server_id,paymentMethod:x.payment_method,whatsapp:x.whatsapp,promo:x.promo,paymentStatus:x.payment_status,transactionStatus:x.transaction_status,providerReference:x.provider_reference,paymentUrl:x.payment_url,createdAt:x.created_at,message:"Pesanan ditemukan.",quantity:Number(x.quantity||1),subtotal:Number(x.subtotal||x.amount||0),fee:Number(x.fee||0),discount:Number(x.discount||0)};
   orders.set(id,o); return o;
 }
 
@@ -103,14 +106,46 @@ app.get("/api/leaderboard",(req,res)=>res.json(leaderboard.map((x,i)=>({rank:i+1
 app.get("/api/reviews",(req,res)=>res.json(reviews.map(x=>({name:x[0],stars:x[1],text:x[2]}))));
 app.get("/api/transactions/recent",(req,res)=>res.json(recent.map(x=>({invoice:x[0],product:x[1],amount:x[2],status:x[3]}))));
 
+app.post("/api/auth/login",(req,res)=>{
+  if(!DEMO_MODE)return res.status(503).json({message:"Demo authentication is disabled."});
+  const username=String(req.body?.username||"").trim().toLowerCase();
+  const password=String(req.body?.password||"");
+  const user=demoUsers.get(username);
+  if(!user||user.password!==password)return res.status(401).json({message:"Username atau password salah."});
+  const {password:_,...safe}=user;
+  res.json({ok:true,user:safe});
+});
+
+app.post("/api/auth/register",(req,res)=>{
+  if(!DEMO_MODE)return res.status(503).json({message:"Demo registration is disabled."});
+  const b=req.body||{};
+  const name=String(b.name||"").trim();
+  const username=String(b.username||"").trim().toLowerCase();
+  const email=String(b.email||"").trim().toLowerCase();
+  const whatsapp=String(b.whatsapp||"").trim();
+  const password=String(b.password||"");
+  if(!name||username.length<3||!email||password.length<6)return res.status(400).json({message:"Lengkapi data dan gunakan password minimal 6 karakter."});
+  if(demoUsers.has(username))return res.status(409).json({message:"Username sudah dipakai."});
+  const user={id:"demo-"+crypto.randomBytes(5).toString("hex"),name,username,email,whatsapp,password};
+  demoUsers.set(username,user);
+  const {password:_,...safe}=user;
+  res.status(201).json({ok:true,user:safe});
+});
+
 app.post("/api/orders",async(req,res)=>{
   try{
     const b=req.body||{}; const p=products.find(x=>x.slug===b.productSlug); const d=p&&p.denominations.find(x=>x.id===b.denominationId);
+    const quantity=Math.min(20,Math.max(1,Number.parseInt(b.quantity,10)||1));
+    const promo=String(b.promo||"").trim().toUpperCase();
     if(!p||!d||!b.userId||!b.paymentMethod||!b.whatsapp)return res.status(400).json({message:"Data pesanan belum lengkap."});
     if(!DEMO_MODE&&(!configured.payment||!configured.topup))return res.status(503).json({message:"Provider produksi belum dikonfigurasi."});
-    const inv=invoice(); const o={invoice:inv,product:p.name,productSlug:p.slug,item:d.label,amount:d.price,amountLabel:rupiah(d.price),userId:String(b.userId).trim(),serverId:String(b.serverId||"").trim(),paymentMethod:b.paymentMethod,whatsapp:String(b.whatsapp).trim(),promo:String(b.promo||"").trim(),fee:DEMO_MODE?1500:0,discount:b.promo?"500":0,paymentStatus:DEMO_MODE?"PAID":"PENDING",transactionStatus:DEMO_MODE?"SUCCESS":"PENDING",providerReference:null,paymentUrl:null,createdAt:new Date().toISOString(),message:DEMO_MODE?"Pesanan demo berhasil diproses.":"Pesanan dibuat dan menunggu pembayaran."};
+    const subtotal=d.price*quantity;
+    const fee=DEMO_MODE?1500:0;
+    const discount=promo==="DEMO15"?Math.round(subtotal*0.15):0;
+    const total=Math.max(0,subtotal+fee-discount);
+    const inv=invoice(); const o={invoice:inv,product:p.name,productSlug:p.slug,item:d.label,quantity,subtotal,fee,discount,amount:total,amountLabel:rupiah(total),userId:String(b.userId).trim(),serverId:String(b.serverId||"").trim(),paymentMethod:String(b.paymentMethod),whatsapp:String(b.whatsapp).trim(),promo,accountData:Array.isArray(b.accountData)?b.accountData.slice(0,6).map(x=>String(x).trim()):[],paymentStatus:DEMO_MODE?"PAID":"PENDING",transactionStatus:DEMO_MODE?"SUCCESS":"PENDING",providerReference:null,paymentUrl:null,createdAt:new Date().toISOString(),message:DEMO_MODE?"Pesanan demo berhasil diproses.":"Pesanan dibuat dan menunggu pembayaran."};
     if(!DEMO_MODE){
-      const pay=await providerRequest(PAYMENT_API_BASE_URL,PAYMENT_API_KEY,PAYMENT_CREATE_PATH,{invoice:inv,amount:o.amount+o.fee-(o.discount?Number(o.discount):0),payment_method:o.paymentMethod,customer:{whatsapp:o.whatsapp},item:{sku:d.id,name:d.label,game:p.name}});
+      const pay=await providerRequest(PAYMENT_API_BASE_URL,PAYMENT_API_KEY,PAYMENT_CREATE_PATH,{invoice:inv,amount:o.amount+o.fee-(o.discount?Number(o.discount):0),payment_method:o.paymentMethod,customer:{whatsapp:o.whatsapp},item:{sku:d.id,name:d.label,game:p.name,quantity:o.quantity}});
       o.paymentStatus=String(pay.status||"PENDING").toUpperCase(); o.paymentUrl=pay.payment_url||pay.checkout_url||pay.redirect_url||null; o.providerReference=pay.reference||pay.transaction_id||pay.id||null; await saveOrder(o); return res.json(o);
     }
     await saveOrder(o); res.json(o);
