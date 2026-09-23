@@ -82,7 +82,7 @@ async function saveOrder(order){
   if(!configured.supabase)return;
   try{
     await fetch(SUPABASE_URL+"/rest/v1/orders",{method:"POST",headers:{"content-type":"application/json","apikey":SUPABASE_SERVICE_ROLE_KEY,"authorization":"Bearer "+SUPABASE_SERVICE_ROLE_KEY,"prefer":"return=minimal"},body:JSON.stringify({
-      invoice:order.invoice,product_slug:order.productSlug,product:order.product,item:order.item,amount:order.amount,user_id:order.userId,server_id:order.serverId||"",payment_method:order.paymentMethod,whatsapp:order.whatsapp,promo:order.promo||"",payment_status:order.paymentStatus,transaction_status:order.transactionStatus,provider_reference:order.providerReference||null,payment_url:order.paymentUrl||null,created_at:order.createdAt,updated_at:new Date().toISOString()
+      invoice:order.invoice,product_slug:order.productSlug,product:order.product,item:order.item,quantity:order.quantity||1,subtotal:order.subtotal||order.amount,fee:order.fee||0,discount:order.discount||0,amount:order.amount,user_id:order.userId,server_id:order.serverId||"",payment_method:order.paymentMethod,whatsapp:order.whatsapp,promo:order.promo||"",payment_status:order.paymentStatus,transaction_status:order.transactionStatus,provider_reference:order.providerReference||null,payment_url:order.paymentUrl||null,created_at:order.createdAt,updated_at:new Date().toISOString()
     })});
   }catch(e){console.error("Supabase persistence warning:",e.message)}
 }
