@@ -1,0 +1,6 @@
+{
+  "name":"playmart-topup","version":"1.0.0","private":true,
+  "description":"Original Indonesian game top-up storefront inspired by modern top-up UX.",
+  "main":"server.js","scripts":{"start":"node server.js","dev":"node server.js"},
+  "engines":{"node":">=20"},"dependencies":{"express":"^5.1.0"}
+}
