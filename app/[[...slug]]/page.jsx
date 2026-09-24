@@ -160,6 +160,7 @@ export default function Page() {
   const isContact = pathname === "/contact-us";
   const isAuth = ["/sign-in", "/sign-up", "/forgot-password"].includes(pathname);
   const isLegal = ["/privacy-policy", "/terms"].includes(pathname);
+  const isAccount = pathname === "/account";
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-950">
@@ -199,6 +200,8 @@ export default function Page() {
           <MagicWheelPage />
         ) : isContact ? (
           <ContactPage config={config} onToast={setToast} />
+        ) : isAccount ? (
+          <AccountPage user={user} onNavigate={go} onLogout={logout} />
         ) : isAuth ? (
           <AuthPage mode={pathname.slice(1)} onNavigate={go} onLogin={(nextUser) => setUser(nextUser)} onToast={setToast} />
         ) : isLegal ? (
@@ -1831,6 +1834,72 @@ function ContactPage({ config, onToast }) {
           <button onClick={() => onToast("Demo: laporan berhasil dikirim.")} className="mt-5 h-12 w-full rounded-xl bg-violet-600 text-sm font-extrabold text-white">
             Kirim Pesan
           </button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function AccountPage({ user, onNavigate, onLogout }) {
+  if (!user) {
+    return (
+      <section className="mx-auto max-w-xl px-4 py-16 text-center sm:px-6">
+        <div className="rounded-[32px] border border-slate-200 bg-white p-8 shadow-sm">
+          <UserRound size={26} className="mx-auto text-violet-600" />
+          <h1 className="mt-4 text-2xl font-black">Belum login</h1>
+          <p className="mt-2 text-sm text-slate-500">Masuk dengan akun demo untuk membuka halaman akun.</p>
+          <button onClick={() => onNavigate("/sign-in")} className="mt-6 rounded-xl bg-violet-600 px-5 py-3 text-xs font-extrabold text-white">
+            Masuk
+          </button>
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section className="mx-auto max-w-3xl px-4 py-10 sm:px-6 lg:py-14">
+      <div className="rounded-[32px] border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-4">
+            <span className="grid h-14 w-14 place-items-center rounded-2xl bg-violet-600 text-white">
+              <UserRound size={22} />
+            </span>
+            <div>
+              <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-violet-600">AKUN DEMO</p>
+              <h1 className="mt-1 text-2xl font-black">{user.name || user.username}</h1>
+              <p className="mt-1 text-xs text-slate-400">@{user.username}</p>
+            </div>
+          </div>
+          <button onClick={onLogout} className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 text-xs font-extrabold text-slate-600">
+            <LogOut size={14} />
+            Keluar
+          </button>
+        </div>
+
+        <div className="mt-8 grid gap-3 sm:grid-cols-2">
+          {[
+            ["Email", user.email || "—"],
+            ["WhatsApp", user.whatsapp || "—"],
+            ["Username", user.username || "—"],
+            ["Status", "Demo aktif"],
+          ].map(([label, value]) => (
+            <div key={label} className="rounded-2xl bg-slate-50 p-4">
+              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">{label}</p>
+              <p className="mt-2 break-words text-sm font-extrabold text-slate-800">{value}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-6 rounded-2xl border border-violet-100 bg-violet-50 p-4">
+          <div className="flex items-start gap-3">
+            <BadgeCheck size={17} className="mt-0.5 text-violet-600" />
+            <div>
+              <p className="text-xs font-extrabold text-violet-900">User demo siap dipakai</p>
+              <p className="mt-1 text-[11px] leading-5 text-violet-700">
+                Kamu bisa langsung mencoba product checkout, preview pembayaran, dan cek invoice dari akun ini.
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     </section>
