@@ -1,73 +1,84 @@
 # PlayMart
 
-PlayMart is an original Indonesian game top-up storefront with a modern marketplace-style UX.
+PlayMart is an original Indonesian game top-up marketplace demo rebuilt with **Next.js + React + Tailwind CSS**.
 
-## Included
+## Frontend
 
-- Responsive storefront and mobile drawer
-- Game catalog, categories, search, articles and budget calculator
-- Checkout + invoice tracking
-- Production-ready server adapter for a payment API
-- Production-ready server adapter for a top-up/fulfillment API
-- Payment webhook endpoint that can trigger fulfillment after payment success
-- Optional Supabase REST persistence
-- Railway health endpoint at `/health`
-- All secrets are read from server-side environment variables
+- Next.js App Router
+- React client components
+- Tailwind CSS v4 via the official PostCSS integration
+- Responsive desktop/mobile navigation
+- Product catalog and filters
+- Product detail + 6-step checkout
+- Preview payment modal
+- Demo invoice tracking
+- Demo account login/register
+- Leaderboard, reviews, articles and Magic Wheel calculator
 
-## Railway
+## Demo user
 
-The repository is connected to the Railway project `joyful-enchantment`, service `amajjaaj`, production environment.
-
-Railway detected Node 20 and the deployment is currently healthy. Railway variables are the correct place for secrets; do not commit real API keys to GitHub. Railway makes service variables available to the running app as environment variables. See the official Railway documentation for variables. 
-
-### Required for demo
+Use this account on the sign-in page:
 
 ```
-DEMO_MODE=true
-SUPPORT_WHATSAPP=628xxxxxxxxxx
+Username: demo
+Password: demo123
 ```
 
-### Required for real transactions
+Registration also works while `DEMO_MODE=true`.
 
-Set:
+## Backend
 
-```
-DEMO_MODE=false
-
-TOPUP_API_BASE_URL=https://YOUR-TOPUP-PROVIDER.example
-TOPUP_API_KEY=YOUR_REAL_SECRET
-TOPUP_ORDER_PATH=/orders
-
-PAYMENT_API_BASE_URL=https://YOUR-PAYMENT-PROVIDER.example
-PAYMENT_API_KEY=YOUR_REAL_SECRET
-PAYMENT_CREATE_PATH=/payments
-
-WEBHOOK_SECRET=YOUR_RANDOM_SECRET
-```
-
-The exact provider URLs, authentication rules and request fields vary by provider. The adapter sends both `Authorization: Bearer` and `x-api-key`; if your provider uses a different contract, its adapter should be adjusted rather than guessing.
-
-### Persistent orders
-
-For production history, configure Supabase:
-
-```
-SUPABASE_URL=https://YOUR_PROJECT.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=YOUR_SERVER_ONLY_KEY
-```
-
-Use the SQL in `supabase/schema.sql` to create the orders table.
-
-## API routes
+The existing Express API remains behind the Next.js custom server so the current API contract is preserved.
 
 - `GET /health`
 - `GET /api/config`
 - `GET /api/products`
 - `GET /api/articles`
-- `POST /api/orders`
 - `GET /api/orders/:invoice`
+- `POST /api/orders`
+- `POST /api/auth/login`
+- `POST /api/auth/register`
 - `POST /api/webhooks/payment`
 
-## Important
+## Railway
 
-No real API key is fabricated or stored in the repository. The project is wired so you only need to paste credentials from the providers you actually choose into Railway Variables. After changing variables, deploy the staged changes in Railway.
+The production service uses:
+
+```
+Build: npm run build
+Start: npm start
+Healthcheck: /health
+```
+
+Keep real provider keys only in Railway Variables. `DEMO_MODE=true` is the intended current demo configuration.
+
+## Production integrations
+
+When moving to production, configure the actual provider credentials and contracts in Railway:
+
+```
+DEMO_MODE=false
+
+TOPUP_API_BASE_URL=
+TOPUP_API_KEY=
+TOPUP_ORDER_PATH=/orders
+
+PAYMENT_API_BASE_URL=
+PAYMENT_API_KEY=
+PAYMENT_CREATE_PATH=/payments
+
+WEBHOOK_SECRET=
+
+SUPABASE_URL=
+SUPABASE_SERVICE_ROLE_KEY=
+```
+
+Provider request fields and authentication vary by provider; the adapter should be mapped to the selected provider instead of guessing.
+
+## Database
+
+`supabase/schema.sql` contains the optional production `orders` table definition. The current demo does not require a Supabase connection.
+
+## UI direction
+
+The UI follows the same broad marketplace information architecture as modern top-up storefronts: persistent navigation, product catalog, detailed product checkout, payment preview and invoice tracking, while using original visuals and implementation.
