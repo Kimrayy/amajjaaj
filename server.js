@@ -1,9 +1,12 @@
 const express = require("express");
 const crypto = require("crypto");
-const path = require("path");
+const next = require("next");
 
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
+const dev = process.env.NODE_ENV !== "production";
+const nextApp = next({ dev });
+const handle = nextApp.getRequestHandler();
 const DEMO_MODE = String(process.env.DEMO_MODE ?? "true").toLowerCase() === "true";
 const SUPPORT_WHATSAPP = process.env.SUPPORT_WHATSAPP || "6281200000000";
 const TOPUP_API_BASE_URL = (process.env.TOPUP_API_BASE_URL || "").replace(/\/$/, "");
@@ -17,7 +20,6 @@ const SUPABASE_URL = (process.env.SUPABASE_URL || "").replace(/\/$/, "");
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 
 app.use(express.json({ limit: "1mb" }));
-app.use(express.static(path.join(__dirname, "public")));
 
 const products = [
   {slug:"mobile-legends",name:"Mobile Legends",publisher:"Moonton",category:"MOBA",popular:true,icon:"⚔️",cover:"https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=1200&q=85", fields:["ID","Server"], hint:"Masukkan ID dan Server Mobile Legends dengan benar.", denominations:[["5 Diamonds",1800],["86 Diamonds",19900],["172 Diamonds",38900],["257 Diamonds",57900],["344 Diamonds",75900],["568 Diamonds",119000],["Weekly Diamond Pass",28900]]},
@@ -164,5 +166,14 @@ app.post("/api/webhooks/payment",async(req,res)=>{
 
 app.get("/api/orders/:invoice",async(req,res)=>{const o=await findOrder(req.params.invoice.toUpperCase());if(!o)return res.status(404).json({message:"Invoice tidak ditemukan."});res.json(o)});
 
-app.use((req,res)=>{if(req.path.startsWith("/api/"))return res.status(404).json({message:"API route not found"});res.sendFile(path.join(__dirname,"public","index.html"))});
-app.listen(PORT,()=>console.log("PlayMart listening on "+PORT+" demo="+DEMO_MODE));
+app.use((req,res,nextMiddleware)=>{
+  if(req.path.startsWith("/api/")) return res.status(404).json({message:"API route not found"});
+  return handle(req,res,nextMiddleware);
+});
+
+nextApp.prepare().then(()=>{
+  app.listen(PORT,()=>console.log("PlayMart listening on "+PORT+" demo="+DEMO_MODE+" next=true"));
+}).catch((error)=>{
+  console.error("Next.js startup error:",error);
+  process.exit(1);
+});
