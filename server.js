@@ -168,7 +168,7 @@ app.get("/api/orders/:invoice",async(req,res)=>{const o=await findOrder(req.para
 
 app.use((req,res,nextMiddleware)=>{
   if(req.path.startsWith("/api/")) return res.status(404).json({message:"API route not found"});
-  return handle(req,res,nextMiddleware);
+  return handle(req,res);
 });
 
 nextApp.prepare().then(()=>{
