@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   ArrowLeft,
   ArrowRight,
@@ -82,8 +82,7 @@ function safeUser() {
 
 export default function Page() {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const router = useRouter();
+    const router = useRouter();
 
   const [products, setProducts] = useState([]);
   const [articles, setArticles] = useState([]);
@@ -178,7 +177,7 @@ export default function Page() {
         ) : isHome ? (
           <HomePage products={products} articles={articles} reviews={reviews} onNavigate={go} />
         ) : isCatalog ? (
-          <CatalogPage products={products} searchParams={searchParams} onNavigate={go} />
+          <CatalogPage products={products} onNavigate={go} />
         ) : isProduct ? (
           <ProductPage
             slug={pathname.split("/")[2]}
@@ -822,9 +821,11 @@ function ArticleCard({ article }) {
   );
 }
 
-function CatalogPage({ products, searchParams, onNavigate }) {
-  const initialQuery = searchParams.get("q") || "";
-  const [query, setQuery] = useState(initialQuery);
+function CatalogPage({ products, onNavigate }) {
+  const [query, setQuery] = useState("");
+  useEffect(() => {
+    setQuery(new URLSearchParams(window.location.search).get("q") || "");
+  }, []);
   const [category, setCategory] = useState("Semua");
 
   const filtered = useMemo(() => {
